@@ -11,6 +11,7 @@ from scanner.forms import discover_forms
 from scanner.parameters import discover_parameters
 from scanner.endpoints import discover_endpoints
 from scanner.input_analysis import analyze_parameters
+from scanner.active import test_parameter_reflection, test_form_parameter_reflection
 
 
 def normalize_url(url):
@@ -70,6 +71,7 @@ def build_html(
     forms,
     parameters,
     endpoints,
+    active_tests,
 ):
     counts = {
         "CRITICAL": 0,
@@ -249,6 +251,32 @@ def build_html(
             '<tr><td colspan="5">'
             "Nenhuma vulnerabilidade encontrada."
             "</td></tr>"
+        )
+
+    active_tests_html = ""
+
+    if active_tests:
+        for number, test in enumerate(active_tests, 1):
+            active_tests_html += (
+                '<div class="resource-card">'
+                f'<div class="resource-details">'
+                f'<p><b>Teste:</b> {escape(str(test.get("type", "N/A")))}</p>'
+                f'<p><b>URL:</b> {escape(str(test.get("url", "N/A")))}</p>'
+                f'<p><b>Parâmetro:</b> {escape(str(test.get("parameter", "N/A")))}</p>'
+                f'<p><b>Método:</b> {escape(str(test.get("method", "N/A")))}</p>'
+                f'<p><b>Status HTTP:</b> {escape(str(test.get("status_code", "N/A")))}</p>'
+                f'<p><b>Refletido:</b> {escape(str(test.get("reflected", "N/A")))}</p>'
+                f'<p><b>Marcador:</b> {escape(str(test.get("marker", "N/A")))}</p>'
+                '</div>'
+                '</div>'
+            )
+    else:
+        active_tests_html = (
+            '<div class="resource-card">'
+            '<div class="resource-details">'
+            '<p>Nenhum teste ativo executado.</p>'
+            '</div>'
+            '</div>'
         )
 
     return f"""<!DOCTYPE html>
@@ -532,6 +560,12 @@ a {{
 {endpoint_rows}
 </div>
 
+<h2>Testes ativos</h2>
+
+<div class="resources">
+{active_tests_html}
+</div>
+
 <h2>Vulnerabilidades</h2>
 
 <div class="table-container">
@@ -574,6 +608,7 @@ def build_text(
     forms,
     parameters,
     endpoints,
+    active_tests,
 ):
     lines = []
 
@@ -584,6 +619,24 @@ def build_text(
 
     lines.append(f"Alvo: {url}")
     lines.append(f"Data da varredura: {scan_date}")
+
+    lines.append("")
+    lines.append("TESTES ATIVOS")
+    lines.append("=" * 60)
+
+    if active_tests:
+        for number, test in enumerate(active_tests, 1):
+            lines.append("")
+            lines.append(f"[{number}] Teste: {test.get("test", "N/A")}")
+            lines.append(f"URL: {test.get("url", "N/A")}")
+            lines.append(f"Parâmetro: {test.get("parameter", "N/A")}")
+            lines.append(f"Método: {test.get("method", "N/A")}")
+            lines.append(f"Status HTTP: {test.get("status_code", "N/A")}")
+            lines.append(f"Refletido: {test.get("reflected", "N/A")}")
+            lines.append(f"Marcador: {test.get("marker", "N/A")}")
+    else:
+        lines.append("")
+        lines.append("Nenhum teste ativo executado.")
 
     lines.append("")
     lines.append("VULNERABILIDADES")
@@ -798,6 +851,39 @@ def main():
 
     print(f"[+] Formulários descobertos: {len(forms)}")
 
+    print("[*] Executando testes ativos não destrutivos...")
+
+    active_tests = []
+
+    for form in forms:
+        method = form.get("method", "GET").upper()
+
+        if method != "POST":
+            continue
+
+        for field in form.get("fields", []):
+            parameter_name = field.get("name", "").strip()
+
+            if not parameter_name:
+                continue
+
+            try:
+                result = test_form_parameter_reflection(
+                    form,
+                    parameter_name
+                )
+                active_tests.append(result)
+            except Exception as error:
+                active_tests.append({
+                    "tested": False,
+                    "parameter": parameter_name,
+                    "method": method,
+                    "error": str(error)
+                })
+
+    print(f"[+] Testes ativos executados: {len(active_tests)}")
+
+
     print("[*] Inventariando parâmetros...")
 
     try:
@@ -845,7 +931,8 @@ def main():
         pages,
         forms,
         parameters,
-        endpoints
+        endpoints,
+    active_tests
     )
 
     html_report = build_html(
@@ -855,7 +942,8 @@ def main():
         pages,
         forms,
         parameters,
-        endpoints
+        endpoints,
+    active_tests
     )
 
     txt_path.write_text(
