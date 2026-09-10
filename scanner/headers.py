@@ -38,7 +38,7 @@ def check_security_headers(headers):
     for header, details in SECURITY_HEADERS.items():
         if header not in headers:
             findings.append({
-                "type": "Missing Security Header",
+                "type": "Cabeçalho de Segurança Ausente",
                 "severity": details["severity"],
                 "parameter": header,
                 "description": details["description"],
