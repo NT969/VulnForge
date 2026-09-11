@@ -260,7 +260,7 @@ def build_html(
             active_tests_html += (
                 '<div class="resource-card">'
                 f'<div class="resource-details">'
-                f'<p><b>Teste:</b> {escape(str(test.get("type", "N/A")))}</p>'
+                f'<p><b>Teste:</b> {escape(str(test.get("type", "Reflexão de parâmetro")))}</p>'
                 f'<p><b>URL:</b> {escape(str(test.get("url", "N/A")))}</p>'
                 f'<p><b>Parâmetro:</b> {escape(str(test.get("parameter", "N/A")))}</p>'
                 f'<p><b>Método:</b> {escape(str(test.get("method", "N/A")))}</p>'
@@ -627,7 +627,7 @@ def build_text(
     if active_tests:
         for number, test in enumerate(active_tests, 1):
             lines.append("")
-            lines.append(f"[{number}] Teste: {test.get("test", "N/A")}")
+            lines.append(f"[{number}] Teste: {"Reflexão de parâmetro"}")
             lines.append(f"URL: {test.get("url", "N/A")}")
             lines.append(f"Parâmetro: {test.get("parameter", "N/A")}")
             lines.append(f"Método: {test.get("method", "N/A")}")
